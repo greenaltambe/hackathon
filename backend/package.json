@@ -14,7 +14,8 @@
     "test:api": "node src/testApi.js",
     "test:commerce": "node src/testCommerceEngine.js",
     "test:ai": "node src/testAiAdvisor.js",
-    "test": "node src/testModels.js && node src/testApi.js && node src/testCommerceEngine.js && node src/testAiAdvisor.js"
+    "test:agentic": "node src/testAgenticLoop.js",
+    "test": "node src/testModels.js && node src/testApi.js && node src/testCommerceEngine.js && node src/testAiAdvisor.js && node src/testAgenticLoop.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

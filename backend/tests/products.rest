@@ -205,25 +205,71 @@ Content-Type: {{contentType}}
 }
 
 ### ==================================================================
+### AGENTIC RECOMMENDATION LOOP (PHASE 4) & SUGGESTIONS QUERIES
+### ==================================================================
+
+### ------------------------------------------------------------------
+### 21. Event Trigger: Stock Update Crossing Reorder Threshold (PRD-005)
+### ------------------------------------------------------------------
+# PRD-005 initial stock is 22, threshold is 10.
+# Setting stock to 7 triggers INVENTORY_LOW event asynchronously.
+# Response returns immediately (200 OK), then Agentic Loop creates PENDING suggestions.
+# @name triggerLowStockEvent
+PATCH {{baseUrl}}/products/PRD-005/stock HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "stockLevel": 7
+}
+
+### ------------------------------------------------------------------
+### 22. Event Trigger: Customer Order on Demand Spike Product (PRD-008)
+### ------------------------------------------------------------------
+# PRD-008 (Hoodie) has high demand velocity (15).
+# Simulating an order decrements stock to 10 (below threshold 12) and bumps velocity to 16.
+# Triggers both INVENTORY_LOW and DEMAND_SPIKE signals asynchronously.
+# @name triggerOrderSpikeEvent
+POST {{baseUrl}}/products/PRD-008/orders HTTP/1.1
+
+### ------------------------------------------------------------------
+### 23. Idempotency Check: Second Order on PRD-008 (Skipping Duplicate)
+### ------------------------------------------------------------------
+# Subsequent orders while suggestions remain PENDING will NOT generate duplicate suggestions.
+# @name deduplicationCheckOrder
+POST {{baseUrl}}/products/PRD-008/orders HTTP/1.1
+
+### ------------------------------------------------------------------
+### 24. Query Pending Pricing Suggestions (Inspection)
+### ------------------------------------------------------------------
+# @name getPendingPricingSuggestions
+GET {{baseUrl}}/pricing-suggestions?status=PENDING HTTP/1.1
+
+### ------------------------------------------------------------------
+### 25. Query Pending Reorder Suggestions (Inspection)
+### ------------------------------------------------------------------
+# @name getPendingReorderSuggestions
+GET {{baseUrl}}/reorder-suggestions?status=PENDING HTTP/1.1
+
+### ==================================================================
 ### ERROR & EDGE CASE TESTS
 ### ==================================================================
 
 ### ------------------------------------------------------------------
-### 19. ERROR TEST: Attempt Order on Out-of-Stock Product (PRD-006)
+### 26. ERROR TEST: Attempt Order on Out-of-Stock Product (PRD-006)
 ### ------------------------------------------------------------------
 # Expected: 409 Conflict
 # @name orderOutOfStockError
 POST {{baseUrl}}/products/PRD-006/orders HTTP/1.1
 
 ### ------------------------------------------------------------------
-### 20. ERROR TEST: Suggestion on Nonexistent Product ID
+### 27. ERROR TEST: Suggestion on Nonexistent Product ID
 ### ------------------------------------------------------------------
 # Expected: 404 Not Found
 # @name suggestNonexistentError
 POST {{baseUrl}}/products/PRD-999-DOES-NOT-EXIST/suggest-pricing HTTP/1.1
 
 ### ------------------------------------------------------------------
-### 21. ERROR TEST: Invalid Stock Input (Negative Stock)
+### 28. ERROR TEST: Invalid Stock Input (Negative Stock)
 ### ------------------------------------------------------------------
 # Expected: 400 Bad Request
 # @name negativeStockError
@@ -235,7 +281,7 @@ Content-Type: {{contentType}}
 }
 
 ### ------------------------------------------------------------------
-### 22. ERROR TEST: Duplicate SKU Creation
+### 29. ERROR TEST: Duplicate SKU Creation
 ### ------------------------------------------------------------------
 # Expected: 409 Conflict
 # @name duplicateSkuError

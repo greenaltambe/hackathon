@@ -9,6 +9,7 @@ import {
   TRIGGER_REASONS,
 } from '../models/index.js';
 import { strategyRegistry } from './commerce/index.js';
+import { eventBus, DOMAIN_EVENTS } from '../events/eventBus.js';
 
 export class AppError extends Error {
   constructor(message, statusCode = 400) {
@@ -125,7 +126,7 @@ export async function updateStock(id, newStock) {
   }
 
   const product = await findProductByIdOrCode(id);
-
+  const previousStock = product.stockLevel;
   product.stockLevel = stockNum;
 
   // Logically synchronize status with stock level
@@ -137,6 +138,18 @@ export async function updateStock(id, newStock) {
   }
 
   await product.save();
+
+  // Publish domain event asynchronously (decoupled from HTTP lifecycle)
+  eventBus.publish(DOMAIN_EVENTS.INVENTORY_CHANGED, {
+    productId: product.productId || product._id.toString(),
+    id: product._id.toString(),
+    sku: product.sku,
+    category: product.category,
+    stockLevel: product.stockLevel,
+    previousStockLevel: previousStock,
+    demandVelocity: product.demandVelocity,
+  });
+
   return product;
 }
 
@@ -152,6 +165,7 @@ export async function simulateOrder(id) {
     throw new AppError(`Cannot simulate order: Product '${product.name}' (${product.sku}) is out of stock`, 409);
   }
 
+  const previousStock = product.stockLevel;
   product.stockLevel -= 1;
   product.demandVelocity += 1;
 
@@ -160,6 +174,18 @@ export async function simulateOrder(id) {
   }
 
   await product.save();
+
+  // Publish domain event asynchronously
+  eventBus.publish(DOMAIN_EVENTS.ORDER_SIMULATED, {
+    productId: product.productId || product._id.toString(),
+    id: product._id.toString(),
+    sku: product.sku,
+    category: product.category,
+    stockLevel: product.stockLevel,
+    previousStockLevel: previousStock,
+    demandVelocity: product.demandVelocity,
+  });
+
   return product;
 }
 
