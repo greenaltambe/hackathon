@@ -5,9 +5,12 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node src/seed.js",
+    "seed:clean": "node src/seed.js --clean",
+    "test:models": "node src/testModels.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
