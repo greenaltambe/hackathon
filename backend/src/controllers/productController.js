@@ -89,10 +89,62 @@ export async function simulateOrder(req, res, next) {
   }
 }
 
+/**
+ * POST /api/products/:id/suggest-pricing
+ * On-demand pricing recommendation endpoint
+ */
+export async function suggestPricing(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { triggerReason, strategy } = req.body || {};
+    const strategyName = req.query?.strategy || strategy;
+
+    const suggestion = await productService.generatePricingSuggestion(id, {
+      triggerReason,
+      strategyName,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Pricing suggestion generated successfully',
+      data: suggestion,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/products/:id/suggest-reorder
+ * On-demand reorder recommendation endpoint
+ */
+export async function suggestReorder(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { triggerReason, strategy } = req.body || {};
+    const strategyName = req.query?.strategy || strategy;
+
+    const suggestion = await productService.generateReorderSuggestion(id, {
+      triggerReason,
+      strategyName,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Reorder suggestion generated successfully',
+      data: suggestion,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   createProduct,
   getProducts,
   getProductById,
   updateStock,
   simulateOrder,
+  suggestPricing,
+  suggestReorder,
 };

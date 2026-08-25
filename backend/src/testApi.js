@@ -221,7 +221,9 @@ async function runApiTests() {
     console.log('\n========================================');
     console.log(`  API Tests Completed: \x1b[32m${passed} Passed\x1b[0m, \x1b[31m${failed} Failed\x1b[0m`);
     console.log('========================================\n');
-    process.exit(failed > 0 ? 1 : 0);
+    if (failed > 0) {
+      process.exit(1);
+    }
   }
 }
 

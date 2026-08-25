@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
-import { Product, PRODUCT_STATUS, CATEGORIES } from '../models/index.js';
+import {
+  Product,
+  PricingSuggestion,
+  ReorderSuggestion,
+  PRODUCT_STATUS,
+  CATEGORIES,
+  SUGGESTION_STATUS,
+  TRIGGER_REASONS,
+} from '../models/index.js';
+import { strategyRegistry } from './commerce/index.js';
 
 export class AppError extends Error {
   constructor(message, statusCode = 400) {
@@ -154,10 +163,97 @@ export async function simulateOrder(id) {
   return product;
 }
 
+/**
+ * Calculates average demand velocity across all products in a given category.
+ * @param {string} category
+ * @returns {Promise<number>}
+ */
+export async function getCategoryAverageDemandVelocity(category) {
+  if (!category) return 0;
+
+  const result = await Product.aggregate([
+    { $match: { category: category.trim().toUpperCase() } },
+    { $group: { _id: '$category', avgVelocity: { $avg: '$demandVelocity' } } },
+  ]);
+
+  return result.length > 0 && result[0].avgVelocity !== null ? result[0].avgVelocity : 0;
+}
+
+/**
+ * Generates and persists a dynamic pricing recommendation using the active Commerce Strategy.
+ * Does NOT modify product.currentPrice or product.stockLevel.
+ *
+ * @param {string} id - Product ID or business code
+ * @param {Object} [options]
+ * @param {string} [options.triggerReason='MANUAL']
+ * @param {string} [options.strategyName=null]
+ * @returns {Promise<Document>} Persisted PricingSuggestion
+ */
+export async function generatePricingSuggestion(id, { triggerReason = TRIGGER_REASONS.MANUAL, strategyName = null } = {}) {
+  const product = await findProductByIdOrCode(id);
+  const categoryAvgVelocity = await getCategoryAverageDemandVelocity(product.category);
+
+  const strategy = strategyRegistry.get(strategyName);
+  const recommendation = await strategy.suggestPricing(product, {
+    categoryAverageDemandVelocity: categoryAvgVelocity,
+    triggerReason,
+  });
+
+  const suggestion = new PricingSuggestion({
+    product: product._id,
+    currentPrice: recommendation.currentPrice,
+    recommendedPrice: recommendation.recommendedPrice,
+    direction: recommendation.direction,
+    confidence: recommendation.confidence,
+    reasoning: recommendation.reasoning,
+    status: SUGGESTION_STATUS.PENDING,
+    triggerReason: recommendation.triggerReason,
+  });
+
+  await suggestion.save();
+  return await suggestion.populate('product');
+}
+
+/**
+ * Generates and persists an inventory replenishment recommendation using the active Commerce Strategy.
+ * Does NOT modify product.stockLevel.
+ *
+ * @param {string} id - Product ID or business code
+ * @param {Object} [options]
+ * @param {string} [options.triggerReason='MANUAL']
+ * @param {string} [options.strategyName=null]
+ * @returns {Promise<Document>} Persisted ReorderSuggestion
+ */
+export async function generateReorderSuggestion(id, { triggerReason = TRIGGER_REASONS.MANUAL, strategyName = null } = {}) {
+  const product = await findProductByIdOrCode(id);
+
+  const strategy = strategyRegistry.get(strategyName);
+  const recommendation = await strategy.suggestReorder(product, {
+    triggerReason,
+  });
+
+  const suggestion = new ReorderSuggestion({
+    product: product._id,
+    currentStock: recommendation.currentStock,
+    recommendedQuantity: recommendation.recommendedQuantity,
+    suggestedLeadTimeDays: recommendation.suggestedLeadTimeDays,
+    confidence: recommendation.confidence,
+    reasoning: recommendation.reasoning,
+    status: SUGGESTION_STATUS.PENDING,
+    triggerReason: recommendation.triggerReason,
+  });
+
+  await suggestion.save();
+  return await suggestion.populate('product');
+}
+
 export default {
   createProduct,
   getProducts,
   getProductById,
   updateStock,
   simulateOrder,
+  getCategoryAverageDemandVelocity,
+  generatePricingSuggestion,
+  generateReorderSuggestion,
 };

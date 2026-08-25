@@ -12,7 +12,8 @@
     "seed:clean": "node src/seed.js --clean",
     "test:models": "node src/testModels.js",
     "test:api": "node src/testApi.js",
-    "test": "node src/testModels.js && node src/testApi.js"
+    "test:commerce": "node src/testCommerceEngine.js",
+    "test": "node src/testModels.js && node src/testApi.js && node src/testCommerceEngine.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

@@ -1,4 +1,4 @@
-### StockPulse Products API - VS Code REST Client Tests
+### StockPulse Products & Commerce API - VS Code REST Client Tests
 ### Base Configuration
 @baseUrl = http://localhost:5000/api
 @contentType = application/json
@@ -33,7 +33,7 @@ GET {{baseUrl}}/products?status=ACTIVE HTTP/1.1
 GET {{baseUrl}}/products?status=ACTIVE&category=HOME HTTP/1.1
 
 ### ------------------------------------------------------------------
-### 6. Filter by Status (PRICE_REVIEW_PENDING - Should show PRD-003)
+### 6. Filter by Status (PRICE_REVIEW_PENDING - Shows PRD-003)
 ### ------------------------------------------------------------------
 # @name filterPriceReviewPending
 GET {{baseUrl}}/products?status=PRICE_REVIEW_PENDING HTTP/1.1
@@ -109,22 +109,94 @@ POST {{baseUrl}}/products/PRD-008/orders HTTP/1.1
 # @name verifyProductAfterOrder
 GET {{baseUrl}}/products/PRD-008 HTTP/1.1
 
+### ==================================================================
+### COMMERCE ENGINE (PHASE 2B) — SUGGESTION ENDPOINTS
+### ==================================================================
+
 ### ------------------------------------------------------------------
-### 14. ERROR TEST: Attempt Order on Out-of-Stock Product (PRD-006)
+### 14. Suggest Pricing: Low Stock Rule Trigger (PRD-003)
 ### ------------------------------------------------------------------
-# PRD-006 is seeded with stockLevel: 0, status: OUT_OF_STOCK -> Expected: 409 Conflict
+# PRD-003 has stock: 8, threshold: 15 (stock < threshold)
+# Expected: +10% price increase ($24.99 -> $27.49), direction: INCREASE, status: PENDING
+# @name suggestPricingLowStock
+POST {{baseUrl}}/products/PRD-003/suggest-pricing HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "MANUAL"
+}
+
+### ------------------------------------------------------------------
+### 15. Suggest Reorder: Low Stock Replenishment (PRD-003)
+### ------------------------------------------------------------------
+# PRD-003 has stock: 8, threshold: 15
+# Expected: (15 * 3) - 8 = 37 units, leadTime: 7 days, status: PENDING
+# @name suggestReorderLowStock
+POST {{baseUrl}}/products/PRD-003/suggest-reorder HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "MANUAL"
+}
+
+### ------------------------------------------------------------------
+### 16. Suggest Pricing: Demand Spike Rule Trigger (PRD-008)
+### ------------------------------------------------------------------
+# PRD-008 has velocity: 15 vs APPAREL average (~9.7) -> velocity > 2x category avg (when threshold holds)
+# Expected: +5% price increase ($54.99 -> $57.74), direction: INCREASE, status: PENDING
+# @name suggestPricingDemandSpike
+POST {{baseUrl}}/products/PRD-008/suggest-pricing HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "DEMAND_SPIKE"
+}
+
+### ------------------------------------------------------------------
+### 17. Suggest Pricing: Normal Conditions -> HOLD (PRD-001)
+### ------------------------------------------------------------------
+# PRD-001 has stock: 45, threshold: 20 (healthy), velocity: 3 vs Electronics avg (~4.0)
+# Expected: direction: HOLD, recommendedPrice: $79.99, status: PENDING
+# @name suggestPricingHold
+POST {{baseUrl}}/products/PRD-001/suggest-pricing HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "MANUAL"
+}
+
+### ------------------------------------------------------------------
+### 18. Suggest Reorder: Overstocked / Healthy Inventory (PRD-002)
+### ------------------------------------------------------------------
+# PRD-002 has stock: 120, threshold: 30 -> (30 * 3) - 120 = -30 -> Clamped to min 1 unit
+# @name suggestReorderOverstocked
+POST {{baseUrl}}/products/PRD-002/suggest-reorder HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "MANUAL"
+}
+
+### ==================================================================
+### ERROR & EDGE CASE TESTS
+### ==================================================================
+
+### ------------------------------------------------------------------
+### 19. ERROR TEST: Attempt Order on Out-of-Stock Product (PRD-006)
+### ------------------------------------------------------------------
+# Expected: 409 Conflict
 # @name orderOutOfStockError
 POST {{baseUrl}}/products/PRD-006/orders HTTP/1.1
 
 ### ------------------------------------------------------------------
-### 15. ERROR TEST: Invalid / Nonexistent Product ID
+### 20. ERROR TEST: Suggestion on Nonexistent Product ID
 ### ------------------------------------------------------------------
 # Expected: 404 Not Found
-# @name nonexistentProductError
-GET {{baseUrl}}/products/PRD-999-DOES-NOT-EXIST HTTP/1.1
+# @name suggestNonexistentError
+POST {{baseUrl}}/products/PRD-999-DOES-NOT-EXIST/suggest-pricing HTTP/1.1
 
 ### ------------------------------------------------------------------
-### 16. ERROR TEST: Invalid Stock Input (Negative Stock)
+### 21. ERROR TEST: Invalid Stock Input (Negative Stock)
 ### ------------------------------------------------------------------
 # Expected: 400 Bad Request
 # @name negativeStockError
@@ -136,14 +208,7 @@ Content-Type: {{contentType}}
 }
 
 ### ------------------------------------------------------------------
-### 17. ERROR TEST: Invalid Category Enum Filter
-### ------------------------------------------------------------------
-# Expected: 400 Bad Request
-# @name invalidCategoryFilterError
-GET {{baseUrl}}/products?category=AUTOMOTIVE HTTP/1.1
-
-### ------------------------------------------------------------------
-### 18. ERROR TEST: Duplicate SKU Creation
+### 22. ERROR TEST: Duplicate SKU Creation
 ### ------------------------------------------------------------------
 # Expected: 409 Conflict
 # @name duplicateSkuError

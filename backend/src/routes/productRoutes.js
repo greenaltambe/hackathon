@@ -22,4 +22,13 @@ router
   .route('/:id/orders')
   .post(productController.simulateOrder);
 
+// Commerce Engine recommendation endpoints
+router
+  .route('/:id/suggest-pricing')
+  .post(productController.suggestPricing);
+
+router
+  .route('/:id/suggest-reorder')
+  .post(productController.suggestReorder);
+
 export default router;
