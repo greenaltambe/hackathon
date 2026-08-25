@@ -178,7 +178,7 @@ sequenceDiagram
     participant API as Express Server
     participant DB as MongoDB
     participant Bus as EventBus (In-Process)
-    participant Loop as AgenticLoop Worker
+    participant Worker as AgenticLoop Worker
     participant AI as AICommerceStrategy
     participant Gemini as Google Gemini API
     
@@ -190,19 +190,19 @@ sequenceDiagram
     API-->>Client: 201 Created (Stock: 7, Velocity: 13) [15ms response]
     
     %% Phase 2: Asynchronous Agentic Loop
-    Bus-)Loop: handleInventoryEvent(event)
-    Loop->>DB: Fetch Product & Category Average
-    Loop->>Loop: SignalDetector: INVENTORY_LOW (7 < 15)
-    Loop->>DB: Check Deduplication (No PENDING suggestion)
+    Bus-->>Worker: handleInventoryEvent(event)
+    Worker->>DB: Fetch Product & Category Average
+    Worker->>Worker: SignalDetector: INVENTORY_LOW (7 < 15)
+    Worker->>DB: Check Deduplication (No PENDING suggestion)
     
     %% Phase 3: AI Reasoning & Validation
-    Loop->>AI: suggestPricing(product, { INVENTORY_LOW })
+    Worker->>AI: suggestPricing(product, { INVENTORY_LOW })
     AI->>Gemini: generateJson(Situational Prompt) [Timeout: 8s]
     Gemini-->>AI: { recommendedPrice: 27.49, direction: "INCREASE", confidence: 0.85 }
     AI->>AI: AIValidator: Bounds Check (0.1x <= 27.49 <= 10x) -> VALID
-    AI-->>Loop: Validated Pricing Recommendation
-    Loop->>DB: Save PricingSuggestion (status: PENDING)
-    Loop->>DB: Transition Product status -> PRICE_REVIEW_PENDING
+    AI-->>Worker: Validated Pricing Recommendation
+    Worker->>DB: Save PricingSuggestion (status: PENDING)
+    Worker->>DB: Transition Product status -> PRICE_REVIEW_PENDING
     
     %% Phase 4: Human Review & Approval
     Client->>API: GET /api/pricing-suggestions?status=PENDING (5s Polling)
