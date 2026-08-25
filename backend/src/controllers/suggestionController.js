@@ -1,5 +1,5 @@
 import { PricingSuggestion, ReorderSuggestion } from '../models/index.js';
-import { findProductByIdOrCode } from '../services/productService.js';
+import * as productService from '../services/productService.js';
 
 /**
  * GET /api/pricing-suggestions
@@ -11,7 +11,7 @@ export async function getPricingSuggestions(req, res, next) {
     const query = {};
 
     if (productId) {
-      const product = await findProductByIdOrCode(productId);
+      const product = await productService.findProductByIdOrCode(productId);
       query.product = product._id;
     }
 
@@ -47,7 +47,7 @@ export async function getReorderSuggestions(req, res, next) {
     const query = {};
 
     if (productId) {
-      const product = await findProductByIdOrCode(productId);
+      const product = await productService.findProductByIdOrCode(productId);
       query.product = product._id;
     }
 
@@ -73,7 +73,86 @@ export async function getReorderSuggestions(req, res, next) {
   }
 }
 
+/**
+ * PATCH /api/pricing-suggestions/:id/accept
+ * Accept pricing suggestion and update live product price
+ */
+export async function acceptPricing(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await productService.acceptPricingSuggestion(id);
+    res.status(200).json({
+      success: true,
+      message: 'Pricing suggestion accepted and product price updated',
+      data: result.suggestion,
+      product: result.product,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/pricing-suggestions/:id/reject
+ * Reject pricing suggestion
+ */
+export async function rejectPricing(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await productService.rejectPricingSuggestion(id);
+    res.status(200).json({
+      success: true,
+      message: 'Pricing suggestion rejected',
+      data: result.suggestion,
+      product: result.product,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/reorder-suggestions/:id/accept
+ * Accept reorder suggestion and increment product stock
+ */
+export async function acceptReorder(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await productService.acceptReorderSuggestion(id);
+    res.status(200).json({
+      success: true,
+      message: 'Reorder suggestion accepted and stock replenished',
+      data: result.suggestion,
+      product: result.product,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/reorder-suggestions/:id/reject
+ * Reject reorder suggestion
+ */
+export async function rejectReorder(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await productService.rejectReorderSuggestion(id);
+    res.status(200).json({
+      success: true,
+      message: 'Reorder suggestion rejected',
+      data: result.suggestion,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   getPricingSuggestions,
   getReorderSuggestions,
+  acceptPricing,
+  rejectPricing,
+  acceptReorder,
+  rejectReorder,
 };

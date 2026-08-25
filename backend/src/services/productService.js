@@ -273,6 +273,139 @@ export async function generateReorderSuggestion(id, { triggerReason = TRIGGER_RE
   return await suggestion.populate('product');
 }
 
+/**
+ * Accept a pricing suggestion: updates suggestion status to ACCEPTED and
+ * applies the recommended price to the live Product document.
+ *
+ * @param {string} suggestionId
+ * @returns {Promise<{ suggestion: Document, product: Document }>}
+ */
+export async function acceptPricingSuggestion(suggestionId) {
+  const suggestion = await PricingSuggestion.findById(suggestionId).populate('product');
+  if (!suggestion) {
+    throw new AppError(`Pricing suggestion '${suggestionId}' not found`, 404);
+  }
+
+  if (suggestion.status !== SUGGESTION_STATUS.PENDING) {
+    throw new AppError(`Pricing suggestion is already ${suggestion.status}`, 400);
+  }
+
+  suggestion.status = SUGGESTION_STATUS.ACCEPTED;
+  await suggestion.save();
+
+  const product = await Product.findById(suggestion.product._id || suggestion.product);
+  if (product) {
+    product.currentPrice = suggestion.recommendedPrice;
+
+    // Check if any other pending pricing suggestions exist for this product
+    const otherPending = await PricingSuggestion.countDocuments({
+      product: product._id,
+      _id: { $ne: suggestion._id },
+      status: SUGGESTION_STATUS.PENDING,
+    });
+
+    if (otherPending === 0 && product.status === PRODUCT_STATUS.PRICE_REVIEW_PENDING) {
+      product.status = product.stockLevel === 0 ? PRODUCT_STATUS.OUT_OF_STOCK : PRODUCT_STATUS.ACTIVE;
+    }
+
+    await product.save();
+  }
+
+  return { suggestion, product };
+}
+
+/**
+ * Reject a pricing suggestion: updates suggestion status to REJECTED.
+ *
+ * @param {string} suggestionId
+ * @returns {Promise<{ suggestion: Document, product: Document }>}
+ */
+export async function rejectPricingSuggestion(suggestionId) {
+  const suggestion = await PricingSuggestion.findById(suggestionId).populate('product');
+  if (!suggestion) {
+    throw new AppError(`Pricing suggestion '${suggestionId}' not found`, 404);
+  }
+
+  if (suggestion.status !== SUGGESTION_STATUS.PENDING) {
+    throw new AppError(`Pricing suggestion is already ${suggestion.status}`, 400);
+  }
+
+  suggestion.status = SUGGESTION_STATUS.REJECTED;
+  await suggestion.save();
+
+  const product = await Product.findById(suggestion.product._id || suggestion.product);
+  if (product) {
+    const otherPending = await PricingSuggestion.countDocuments({
+      product: product._id,
+      _id: { $ne: suggestion._id },
+      status: SUGGESTION_STATUS.PENDING,
+    });
+
+    if (otherPending === 0 && product.status === PRODUCT_STATUS.PRICE_REVIEW_PENDING) {
+      product.status = product.stockLevel === 0 ? PRODUCT_STATUS.OUT_OF_STOCK : PRODUCT_STATUS.ACTIVE;
+      await product.save();
+    }
+  }
+
+  return { suggestion, product };
+}
+
+/**
+ * Accept a reorder suggestion: updates status to ACCEPTED and simulates
+ * inbound replenishment by incrementing product.stockLevel.
+ *
+ * @param {string} suggestionId
+ * @returns {Promise<{ suggestion: Document, product: Document }>}
+ */
+export async function acceptReorderSuggestion(suggestionId) {
+  const suggestion = await ReorderSuggestion.findById(suggestionId).populate('product');
+  if (!suggestion) {
+    throw new AppError(`Reorder suggestion '${suggestionId}' not found`, 404);
+  }
+
+  if (suggestion.status !== SUGGESTION_STATUS.PENDING) {
+    throw new AppError(`Reorder suggestion is already ${suggestion.status}`, 400);
+  }
+
+  suggestion.status = SUGGESTION_STATUS.ACCEPTED;
+  await suggestion.save();
+
+  const product = await Product.findById(suggestion.product._id || suggestion.product);
+  if (product) {
+    product.stockLevel += suggestion.recommendedQuantity;
+
+    if (product.status === PRODUCT_STATUS.OUT_OF_STOCK && product.stockLevel > 0) {
+      product.status = PRODUCT_STATUS.ACTIVE;
+    }
+
+    await product.save();
+  }
+
+  return { suggestion, product };
+}
+
+/**
+ * Reject a reorder suggestion: updates status to REJECTED.
+ *
+ * @param {string} suggestionId
+ * @returns {Promise<{ suggestion: Document }>}
+ */
+export async function rejectReorderSuggestion(suggestionId) {
+  const suggestion = await ReorderSuggestion.findById(suggestionId).populate('product');
+  if (!suggestion) {
+    throw new AppError(`Reorder suggestion '${suggestionId}' not found`, 404);
+  }
+
+  if (suggestion.status !== SUGGESTION_STATUS.PENDING) {
+    throw new AppError(`Reorder suggestion is already ${suggestion.status}`, 400);
+  }
+
+  suggestion.status = SUGGESTION_STATUS.REJECTED;
+  await suggestion.save();
+
+  return { suggestion };
+}
+
 export default {
   createProduct,
   getProducts,
@@ -282,4 +415,8 @@ export default {
   getCategoryAverageDemandVelocity,
   generatePricingSuggestion,
   generateReorderSuggestion,
+  acceptPricingSuggestion,
+  rejectPricingSuggestion,
+  acceptReorderSuggestion,
+  rejectReorderSuggestion,
 };

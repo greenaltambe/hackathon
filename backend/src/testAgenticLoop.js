@@ -206,9 +206,9 @@ async function runAgenticTests() {
     geminiClient.clearMockCaller();
 
     // ------------------------------------------------------------------
-    // [5] INTEGRATION: Suggestion Query Endpoints
+    // [5] INTEGRATION: Suggestion Query & Review (Accept/Reject) Endpoints
     // ------------------------------------------------------------------
-    console.log('\n[5] Testing Suggestion Query Endpoints:');
+    console.log('\n[5] Testing Suggestion Query, Accept & Reject Workflows:');
 
     const pricingListRes = await request('/pricing-suggestions?status=PENDING');
     assert(pricingListRes.status === 200, 'GET /api/pricing-suggestions returns 200');
@@ -217,6 +217,26 @@ async function runAgenticTests() {
     const reorderListRes = await request('/reorder-suggestions?status=PENDING');
     assert(reorderListRes.status === 200, 'GET /api/reorder-suggestions returns 200');
     assert(reorderListRes.body.count > 0, 'Returns list of pending reorder suggestions');
+
+    // Test Accepting Pricing Suggestion
+    const targetPricing = pricingListRes.body.data[0];
+    const acceptPricingRes = await request(`/pricing-suggestions/${targetPricing._id}/accept`, {
+      method: 'PATCH',
+    });
+    assert(acceptPricingRes.status === 200, 'PATCH /api/pricing-suggestions/:id/accept returns 200');
+    assert(acceptPricingRes.body.data.status === SUGGESTION_STATUS.ACCEPTED, 'Suggestion status updated to ACCEPTED');
+    assert(acceptPricingRes.body.product.currentPrice === targetPricing.recommendedPrice, 'Live Product currentPrice updated to recommendedPrice');
+
+    // Test Accepting Reorder Suggestion
+    const targetReorder = reorderListRes.body.data[0];
+    const priorProduct = await Product.findById(targetReorder.product._id || targetReorder.product);
+    const priorStock = priorProduct.stockLevel;
+    const acceptReorderRes = await request(`/reorder-suggestions/${targetReorder._id}/accept`, {
+      method: 'PATCH',
+    });
+    assert(acceptReorderRes.status === 200, 'PATCH /api/reorder-suggestions/:id/accept returns 200');
+    assert(acceptReorderRes.body.data.status === SUGGESTION_STATUS.ACCEPTED, 'Reorder suggestion status updated to ACCEPTED');
+    assert(acceptReorderRes.body.product.stockLevel === priorStock + targetReorder.recommendedQuantity, 'Product stockLevel replenished with recommendedQuantity');
 
     // ------------------------------------------------------------------
     // [6] CLEANUP & RESET

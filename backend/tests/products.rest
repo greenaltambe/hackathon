@@ -251,6 +251,35 @@ GET {{baseUrl}}/pricing-suggestions?status=PENDING HTTP/1.1
 GET {{baseUrl}}/reorder-suggestions?status=PENDING HTTP/1.1
 
 ### ==================================================================
+### SUGGESTION REVIEW & HUMAN APPROVAL ENDPOINTS (PHASE 5)
+### ==================================================================
+
+### ------------------------------------------------------------------
+### 26. Accept Pricing Suggestion (Applies live price update)
+### ------------------------------------------------------------------
+# Replace {{suggestionId}} with an actual ObjectId from GET /pricing-suggestions
+# @name acceptPricingSuggestion
+PATCH {{baseUrl}}/pricing-suggestions/{{getPendingPricingSuggestions.response.body.data[0]._id}}/accept HTTP/1.1
+
+### ------------------------------------------------------------------
+### 27. Reject Pricing Suggestion (Marks as REJECTED)
+### ------------------------------------------------------------------
+# @name rejectPricingSuggestion
+PATCH {{baseUrl}}/pricing-suggestions/{{getPendingPricingSuggestions.response.body.data[0]._id}}/reject HTTP/1.1
+
+### ------------------------------------------------------------------
+### 28. Accept Reorder Suggestion (Replenishes on-hand stock)
+### ------------------------------------------------------------------
+# @name acceptReorderSuggestion
+PATCH {{baseUrl}}/reorder-suggestions/{{getPendingReorderSuggestions.response.body.data[0]._id}}/accept HTTP/1.1
+
+### ------------------------------------------------------------------
+### 29. Reject Reorder Suggestion (Marks as REJECTED)
+### ------------------------------------------------------------------
+# @name rejectReorderSuggestion
+PATCH {{baseUrl}}/reorder-suggestions/{{getPendingReorderSuggestions.response.body.data[0]._id}}/reject HTTP/1.1
+
+### ==================================================================
 ### ERROR & EDGE CASE TESTS
 ### ==================================================================
 
