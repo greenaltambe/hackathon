@@ -9,7 +9,6 @@ export const theme = createTheme({
   },
   defaultRadius: 'md',
   colors: {
-    // Custom tailored teal brand palette
     teal: [
       '#f0fdfa', // 0
       '#ccfbf1', // 1
@@ -24,10 +23,10 @@ export const theme = createTheme({
     ],
   },
   shadows: {
-    xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-    sm: '0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.05)',
+    xs: '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+    sm: '0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
+    md: '0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04)',
+    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.04)',
   },
   components: {
     Card: {
@@ -48,11 +47,65 @@ export const theme = createTheme({
       defaultProps: {
         size: 'sm',
       },
+      styles: {
+        root: {
+          fontWeight: 600,
+          transition: 'all 0.15s ease',
+        },
+      },
     },
     Badge: {
       defaultProps: {
         size: 'md',
         radius: 'sm',
+      },
+      styles: {
+        root: {
+          fontWeight: 600,
+          letterSpacing: '0.01em',
+        },
+      },
+    },
+    TextInput: {
+      defaultProps: {
+        size: 'sm',
+      },
+      styles: {
+        input: {
+          borderColor: '#e2e8f0',
+          backgroundColor: '#ffffff',
+          '&:focus': {
+            borderColor: '#0d9488',
+          },
+        },
+      },
+    },
+    Select: {
+      defaultProps: {
+        size: 'sm',
+      },
+      styles: {
+        input: {
+          borderColor: '#e2e8f0',
+          backgroundColor: '#ffffff',
+          '&:focus': {
+            borderColor: '#0d9488',
+          },
+        },
+      },
+    },
+    Table: {
+      styles: {
+        th: {
+          color: '#475569',
+          fontWeight: 600,
+          fontSize: '12.5px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        },
+        td: {
+          fontSize: '13.5px',
+        },
       },
     },
   },

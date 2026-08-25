@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
+    "dev": "node --watch index.js",
     "seed": "node src/seed.js",
     "seed:clean": "node src/seed.js --clean",
     "test:models": "node src/testModels.js",

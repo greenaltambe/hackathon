@@ -10,10 +10,26 @@ StockPulse is an autonomous, reactive commerce operations platform that monitors
 - **Node.js**: v18+ or v20+
 - **MongoDB**: Local MongoDB instance running on `localhost:27017` (or MongoDB Atlas URI)
 
-### 1. Clone & Configure Backend
+### 1. Configure & Seed Backend
 ```bash
 cd backend
 npm install
+npm run seed:clean
+```
+
+### 2. Start Backend Server (Port 5000)
+```bash
+npm run dev
+```
+
+### 3. Start Merchandising Console (Port 3000 / 3001)
+In a separate terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open **`http://localhost:3000`** (or `http://localhost:3001`) in your browser.
 cp .env.example .env
 # Optional: add GEMINI_API_KEY in backend/.env for AI recommendations
 ```

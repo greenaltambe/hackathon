@@ -11,7 +11,6 @@ import {
   Paper,
   Table,
   Tooltip,
-  Box,
 } from '@mantine/core';
 import {
   IconBox,
@@ -43,9 +42,9 @@ export function OverviewView({
 
   return (
     <Stack gap="lg">
-      {/* Welcome & Live Summary Banner */}
+      {/* 1. Context & Attention Header */}
       <Paper p="lg" radius="md" bg="#ffffff" withBorder style={{ borderColor: '#e2e8f0' }}>
-        <Group justify="space-between" align="center">
+        <Group justify="space-between" align="center" wrap="wrap" gap="md">
           <div>
             <Group gap="xs" mb={4}>
               <Text size="xl" fw={700} style={{ fontFamily: 'Outfit, sans-serif', color: '#0f172a' }}>
@@ -73,6 +72,7 @@ export function OverviewView({
               size="sm"
               leftSection={<IconBox size={15} />}
               onClick={onNavigateToProducts}
+              aria-label="View complete product catalog"
             >
               View Catalog
             </Button>
@@ -83,6 +83,7 @@ export function OverviewView({
                 size="sm"
                 rightSection={<IconArrowRight size={15} />}
                 onClick={onNavigateToRecommendations}
+                aria-label={`Review ${totalPending} pending recommendations`}
               >
                 Review Recommendations ({totalPending})
               </Button>
@@ -91,16 +92,16 @@ export function OverviewView({
         </Group>
       </Paper>
 
-      {/* Primary KPI Cards */}
+      {/* 2. Cohesive KPI Summary Cards */}
       <SimpleGrid cols={{ base: 1, sm: 2, md: 5 }} spacing="md">
-        {/* Total Products */}
+        {/* Total Catalog */}
         <Card p="md" radius="md" withBorder style={{ borderColor: '#e2e8f0' }}>
           <Group justify="space-between" mb="xs">
             <Text size="xs" c="#64748b" fw={600} tt="uppercase">
               Total Catalog
             </Text>
             <ThemeIcon color="gray" variant="light" size="sm" radius="sm">
-              <IconBox size={15} />
+              <IconBox size={14} />
             </ThemeIcon>
           </Group>
           <Group align="flex-end" gap={6}>
@@ -123,7 +124,7 @@ export function OverviewView({
               Low Stock
             </Text>
             <ThemeIcon color="orange" variant="light" size="sm" radius="sm">
-              <IconAlertTriangle size={15} />
+              <IconAlertTriangle size={14} />
             </ThemeIcon>
           </Group>
           <Group align="flex-end" gap={6}>
@@ -146,7 +147,7 @@ export function OverviewView({
               Out of Stock
             </Text>
             <ThemeIcon color="red" variant="light" size="sm" radius="sm">
-              <IconCircleOff size={15} />
+              <IconCircleOff size={14} />
             </ThemeIcon>
           </Group>
           <Group align="flex-end" gap={6}>
@@ -169,7 +170,7 @@ export function OverviewView({
               Pending Pricing
             </Text>
             <ThemeIcon color="yellow" variant="light" size="sm" radius="sm">
-              <IconTags size={15} />
+              <IconTags size={14} />
             </ThemeIcon>
           </Group>
           <Group align="flex-end" gap={6}>
@@ -192,7 +193,7 @@ export function OverviewView({
               Pending Reorder
             </Text>
             <ThemeIcon color="teal" variant="light" size="sm" radius="sm">
-              <IconTruckLoading size={15} />
+              <IconTruckLoading size={14} />
             </ThemeIcon>
           </Group>
           <Group align="flex-end" gap={6}>
@@ -209,7 +210,7 @@ export function OverviewView({
         </Card>
       </SimpleGrid>
 
-      {/* Action-Required Products Table */}
+      {/* 3. Priority Inventory Watchlist Table */}
       <Paper p="lg" radius="md" bg="#ffffff" withBorder style={{ borderColor: '#e2e8f0' }}>
         <Group justify="space-between" mb="md">
           <div>
@@ -228,95 +229,106 @@ export function OverviewView({
         <Table verticalSpacing="sm" highlightOnHover styles={{ tr: { borderBottom: '1px solid #f1f5f9' } }}>
           <Table.Thead>
             <Table.Tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Product</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Category</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Price</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Stock vs Threshold</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Velocity</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Status</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px', textAlign: 'right' }}>Quick Action</Table.Th>
+              <Table.Th style={{ width: '220px' }}>Product</Table.Th>
+              <Table.Th style={{ width: '130px' }}>Category</Table.Th>
+              <Table.Th style={{ width: '100px' }}>Price</Table.Th>
+              <Table.Th style={{ width: '180px' }}>Stock vs Threshold</Table.Th>
+              <Table.Th style={{ width: '150px' }}>Demand Velocity</Table.Th>
+              <Table.Th style={{ width: '130px' }}>Status</Table.Th>
+              <Table.Th style={{ textAlign: 'right', width: '130px' }}>Quick Action</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {products.slice(0, 5).map((product) => {
-              const isLowStock = product.stockLevel < product.reorderThreshold && product.stockLevel > 0;
-              const isOutOfStock = product.stockLevel === 0;
+            {products.length === 0 ? (
+              <Table.Tr>
+                <Table.Td colSpan={7}>
+                  <Text ta="center" c="#64748b" py="xl">
+                    No products found in catalog.
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
+            ) : (
+              products.slice(0, 5).map((product) => {
+                const isLowStock = product.stockLevel < product.reorderThreshold && product.stockLevel > 0;
+                const isOutOfStock = product.stockLevel === 0;
 
-              return (
-                <Table.Tr key={product._id || product.productId}>
-                  <Table.Td>
-                    <div>
+                return (
+                  <Table.Tr key={product._id || product.productId}>
+                    <Table.Td>
+                      <div>
+                        <Text fw={600} size="sm" c="#0f172a">
+                          {product.name}
+                        </Text>
+                        <Text size="xs" c="#64748b">
+                          {product.sku} · {product.productId}
+                        </Text>
+                      </div>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge variant="outline" color="gray" size="xs">
+                        {product.category}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
                       <Text fw={600} size="sm" c="#0f172a">
-                        {product.name}
+                        ${Number(product.currentPrice).toFixed(2)}
                       </Text>
-                      <Text size="xs" c="#64748b">
-                        {product.sku} · {product.productId}
-                      </Text>
-                    </div>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge variant="outline" color="gray" size="xs">
-                      {product.category}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text fw={600} size="sm" c="#0f172a">
-                      ${Number(product.currentPrice).toFixed(2)}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap={6}>
-                      <Text
-                        fw={700}
-                        size="sm"
-                        c={isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669'}
-                      >
-                        {product.stockLevel}
-                      </Text>
-                      <Text size="xs" c="#94a3b8">
-                        / {product.reorderThreshold} target
-                      </Text>
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color="blue" variant="subtle" size="sm">
-                      {product.demandVelocity} orders/24h
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    {product.status === 'ACTIVE' && (
-                      <Badge color="green" variant="light" size="sm">
-                        Active
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={6}>
+                        <Text
+                          fw={700}
+                          size="sm"
+                          c={isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669'}
+                        >
+                          {product.stockLevel}
+                        </Text>
+                        <Text size="xs" c="#94a3b8">
+                          / {product.reorderThreshold} target
+                        </Text>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color="blue" variant="subtle" size="sm">
+                        {product.demandVelocity} orders/24h
                       </Badge>
-                    )}
-                    {product.status === 'PRICE_REVIEW_PENDING' && (
-                      <Badge color="yellow" variant="light" size="sm">
-                        Review Pending
-                      </Badge>
-                    )}
-                    {product.status === 'OUT_OF_STOCK' && (
-                      <Badge color="red" variant="light" size="sm">
-                        Out of Stock
-                      </Badge>
-                    )}
-                  </Table.Td>
-                  <Table.Td style={{ textAlign: 'right' }}>
-                    <Tooltip label="Simulate 1 customer order (decrements stock & triggers agentic loop)">
-                      <Button
-                        size="compact-xs"
-                        variant="light"
-                        color="teal"
-                        leftSection={<IconShoppingCart size={13} />}
-                        disabled={product.stockLevel <= 0}
-                        onClick={() => onSimulateSale(product.productId || product._id)}
-                      >
-                        Simulate Sale
-                      </Button>
-                    </Tooltip>
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
+                    </Table.Td>
+                    <Table.Td>
+                      {product.status === 'ACTIVE' && (
+                        <Badge color="green" variant="light" size="sm">
+                          Active
+                        </Badge>
+                      )}
+                      {product.status === 'PRICE_REVIEW_PENDING' && (
+                        <Badge color="yellow" variant="light" size="sm">
+                          Review Pending
+                        </Badge>
+                      )}
+                      {product.status === 'OUT_OF_STOCK' && (
+                        <Badge color="red" variant="light" size="sm">
+                          Out of Stock
+                        </Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: 'right' }}>
+                      <Tooltip label="Simulate 1 customer order (decrements stock & triggers agentic loop)">
+                        <Button
+                          size="compact-xs"
+                          variant="light"
+                          color="teal"
+                          leftSection={<IconShoppingCart size={13} />}
+                          disabled={product.stockLevel <= 0}
+                          onClick={() => onSimulateSale(product.productId || product._id)}
+                          aria-label={`Simulate purchase order for ${product.name}`}
+                        >
+                          Simulate Sale
+                        </Button>
+                      </Tooltip>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })
+            )}
           </Table.Tbody>
         </Table>
       </Paper>

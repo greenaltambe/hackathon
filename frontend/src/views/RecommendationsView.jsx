@@ -15,7 +15,6 @@ import {
   Modal,
   ThemeIcon,
   Alert,
-  Box,
 } from '@mantine/core';
 import {
   IconTags,
@@ -39,6 +38,7 @@ export function RecommendationsView({
   const [activeTab, setActiveTab] = useState('pricing');
   const [statusFilter, setStatusFilter] = useState('PENDING');
   const [triggerFilter, setTriggerFilter] = useState('ALL');
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState(null); // { type: 'PRICING' | 'REORDER', action: 'ACCEPT' | 'REJECT', suggestion: Object }
@@ -84,22 +84,26 @@ export function RecommendationsView({
   const handleConfirmAction = async () => {
     if (!confirmModal) return;
 
-    const { type, action, suggestion } = confirmModal;
-    if (type === 'PRICING') {
-      if (action === 'ACCEPT') {
-        await onAcceptPricing(suggestion._id);
-      } else {
-        await onRejectPricing(suggestion._id);
+    setActionLoading(true);
+    try {
+      const { type, action, suggestion } = confirmModal;
+      if (type === 'PRICING') {
+        if (action === 'ACCEPT') {
+          await onAcceptPricing(suggestion._id);
+        } else {
+          await onRejectPricing(suggestion._id);
+        }
+      } else if (type === 'REORDER') {
+        if (action === 'ACCEPT') {
+          await onAcceptReorder(suggestion._id);
+        } else {
+          await onRejectReorder(suggestion._id);
+        }
       }
-    } else if (type === 'REORDER') {
-      if (action === 'ACCEPT') {
-        await onAcceptReorder(suggestion._id);
-      } else {
-        await onRejectReorder(suggestion._id);
-      }
+      setConfirmModal(null);
+    } finally {
+      setActionLoading(false);
     }
-
-    setConfirmModal(null);
   };
 
   return (
@@ -129,6 +133,7 @@ export function RecommendationsView({
               onChange={(val) => setStatusFilter(val || 'PENDING')}
               size="xs"
               w={150}
+              aria-label="Filter recommendations by status"
             />
 
             <Select
@@ -143,6 +148,7 @@ export function RecommendationsView({
               onChange={(val) => setTriggerFilter(val || 'ALL')}
               size="xs"
               w={160}
+              aria-label="Filter recommendations by trigger reason"
             />
           </Group>
         </Group>
@@ -153,7 +159,7 @@ export function RecommendationsView({
         <Tabs.List mb="md" style={{ borderBottom: '1px solid #e2e8f0' }}>
           <Tabs.Tab
             value="pricing"
-            leftSection={<IconTags size={15} />}
+            leftSection={<IconTags size={15} aria-hidden="true" />}
             rightSection={
               filteredPricing.filter((s) => s.status === 'PENDING').length > 0 ? (
                 <Badge size="xs" color="yellow" variant="filled" circle>
@@ -162,13 +168,14 @@ export function RecommendationsView({
               ) : null
             }
             style={{ fontWeight: 600 }}
+            aria-label={`Dynamic Pricing Proposals (${filteredPricing.length})`}
           >
             Dynamic Pricing Proposals ({filteredPricing.length})
           </Tabs.Tab>
 
           <Tabs.Tab
             value="reorder"
-            leftSection={<IconTruckLoading size={15} />}
+            leftSection={<IconTruckLoading size={15} aria-hidden="true" />}
             rightSection={
               filteredReorder.filter((s) => s.status === 'PENDING').length > 0 ? (
                 <Badge size="xs" color="teal" variant="filled" circle>
@@ -177,6 +184,7 @@ export function RecommendationsView({
               ) : null
             }
             style={{ fontWeight: 600 }}
+            aria-label={`Inventory Replenishment Orders (${filteredReorder.length})`}
           >
             Inventory Replenishment Orders ({filteredReorder.length})
           </Tabs.Tab>
@@ -257,7 +265,7 @@ export function RecommendationsView({
                               </Text>
                             </div>
 
-                            <IconArrowRight size={18} color="#0d9488" />
+                            <IconArrowRight size={18} color="#0d9488" aria-hidden="true" />
 
                             <div>
                               <Text size="xs" c="#64748b" fw={500}>
@@ -287,12 +295,19 @@ export function RecommendationsView({
                             {confidencePct}%
                           </Text>
                         </Group>
-                        <Progress value={confidencePct} color="teal" size="xs" radius="xl" mb="sm" />
+                        <Progress
+                          value={confidencePct}
+                          color="teal"
+                          size="xs"
+                          radius="xl"
+                          mb="sm"
+                          aria-label={`Advisor confidence: ${confidencePct}%`}
+                        />
 
                         {/* 4. AI / Strategy Rationale */}
                         <Paper p="sm" radius="md" bg="#f8fafc" withBorder style={{ borderColor: '#e2e8f0' }}>
                           <Group gap={6} align="flex-start">
-                            <IconSparkles size={15} color="#ca8a04" style={{ flexShrink: 0, marginTop: 2 }} />
+                            <IconSparkles size={15} color="#ca8a04" style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
                             <div>
                               <Text size="xs" fw={700} c="#0f172a" mb={2}>
                                 Why StockPulse recommends this:
@@ -314,6 +329,7 @@ export function RecommendationsView({
                             size="sm"
                             leftSection={<IconX size={14} />}
                             onClick={() => setConfirmModal({ type: 'PRICING', action: 'REJECT', suggestion: item })}
+                            aria-label={`Reject pricing recommendation for ${product.name}`}
                           >
                             Reject
                           </Button>
@@ -323,6 +339,7 @@ export function RecommendationsView({
                             size="sm"
                             leftSection={<IconCheck size={14} />}
                             onClick={() => setConfirmModal({ type: 'PRICING', action: 'ACCEPT', suggestion: item })}
+                            aria-label={`Accept price update to $${recPrice.toFixed(2)} for ${product.name}`}
                           >
                             Accept Price Update
                           </Button>
@@ -443,12 +460,19 @@ export function RecommendationsView({
                             {confidencePct}%
                           </Text>
                         </Group>
-                        <Progress value={confidencePct} color="teal" size="xs" radius="xl" mb="sm" />
+                        <Progress
+                          value={confidencePct}
+                          color="teal"
+                          size="xs"
+                          radius="xl"
+                          mb="sm"
+                          aria-label={`Advisor confidence: ${confidencePct}%`}
+                        />
 
                         {/* Rationale Callout */}
                         <Paper p="sm" radius="md" bg="#f8fafc" withBorder style={{ borderColor: '#e2e8f0' }}>
                           <Group gap={6} align="flex-start">
-                            <IconSparkles size={15} color="#0d9488" style={{ flexShrink: 0, marginTop: 2 }} />
+                            <IconSparkles size={15} color="#0d9488" style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
                             <div>
                               <Text size="xs" fw={700} c="#0f172a" mb={2}>
                                 Why StockPulse recommends this:
@@ -470,6 +494,7 @@ export function RecommendationsView({
                             size="sm"
                             leftSection={<IconX size={14} />}
                             onClick={() => setConfirmModal({ type: 'REORDER', action: 'REJECT', suggestion: item })}
+                            aria-label={`Reject replenishment purchase order for ${product.name}`}
                           >
                             Reject PO
                           </Button>
@@ -479,6 +504,7 @@ export function RecommendationsView({
                             size="sm"
                             leftSection={<IconCheck size={14} />}
                             onClick={() => setConfirmModal({ type: 'REORDER', action: 'ACCEPT', suggestion: item })}
+                            aria-label={`Accept replenishment of ${recQty} units for ${product.name}`}
                           >
                             Accept & Replenish Stock
                           </Button>
@@ -503,7 +529,7 @@ export function RecommendationsView({
         onClose={() => setConfirmModal(null)}
         title={
           <Group gap="xs">
-            <IconAlertTriangle color={confirmModal?.action === 'ACCEPT' ? '#0d9488' : '#dc2626'} size={20} />
+            <IconAlertTriangle color={confirmModal?.action === 'ACCEPT' ? '#0d9488' : '#dc2626'} size={20} aria-hidden="true" />
             <Text fw={700} c="#0f172a">
               Confirm {confirmModal?.action === 'ACCEPT' ? 'Approval' : 'Rejection'}
             </Text>
@@ -535,12 +561,13 @@ export function RecommendationsView({
             )}
 
             <Group justify="flex-end" mt="sm">
-              <Button variant="default" onClick={() => setConfirmModal(null)}>
+              <Button variant="default" onClick={() => setConfirmModal(null)} disabled={actionLoading}>
                 Cancel
               </Button>
               <Button
                 color={confirmModal.action === 'ACCEPT' ? 'teal' : 'red'}
                 onClick={handleConfirmAction}
+                loading={actionLoading}
               >
                 Confirm {confirmModal.action}
               </Button>

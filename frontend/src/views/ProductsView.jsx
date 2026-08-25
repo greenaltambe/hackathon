@@ -84,16 +84,17 @@ export function ProductsView({
         <Group justify="space-between" wrap="wrap" gap="md">
           <TextInput
             placeholder="Search catalog by SKU, Product Name..."
-            leftSection={<IconSearch size={16} color="#94a3b8" />}
+            leftSection={<IconSearch size={16} color="#94a3b8" aria-hidden="true" />}
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
             style={{ flex: 1, minWidth: '260px' }}
             size="sm"
+            aria-label="Search catalog by SKU or product name"
           />
 
           <Group gap="sm">
             <Select
-              leftSection={<IconFilter size={15} color="#94a3b8" />}
+              leftSection={<IconFilter size={15} color="#94a3b8" aria-hidden="true" />}
               data={[
                 { value: 'ALL', label: 'All Categories' },
                 { value: 'ELECTRONICS', label: 'Electronics' },
@@ -105,6 +106,7 @@ export function ProductsView({
               onChange={(val) => setCategoryFilter(val || 'ALL')}
               size="sm"
               w={160}
+              aria-label="Filter products by category"
             />
 
             <Select
@@ -118,6 +120,7 @@ export function ProductsView({
               onChange={(val) => setStatusFilter(val || 'ALL')}
               size="sm"
               w={160}
+              aria-label="Filter products by lifecycle status"
             />
           </Group>
         </Group>
@@ -137,13 +140,13 @@ export function ProductsView({
         <Table verticalSpacing="sm" highlightOnHover styles={{ tr: { borderBottom: '1px solid #f1f5f9' } }}>
           <Table.Thead>
             <Table.Tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Product & SKU</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Category</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Selling Price</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px', width: '220px' }}>Inventory Health</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Velocity</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px' }}>Status</Table.Th>
-              <Table.Th style={{ color: '#475569', fontWeight: 600, fontSize: '13px', textAlign: 'right' }}>Actions</Table.Th>
+              <Table.Th style={{ width: '220px' }}>Product & SKU</Table.Th>
+              <Table.Th style={{ width: '120px' }}>Category</Table.Th>
+              <Table.Th style={{ width: '110px' }}>Selling Price</Table.Th>
+              <Table.Th style={{ width: '220px' }}>Inventory Health</Table.Th>
+              <Table.Th style={{ width: '140px' }}>Velocity</Table.Th>
+              <Table.Th style={{ width: '130px' }}>Status</Table.Th>
+              <Table.Th style={{ width: '120px', textAlign: 'right' }}>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -171,6 +174,14 @@ export function ProductsView({
                           c="#0f172a"
                           style={{ cursor: 'pointer' }}
                           onClick={() => setDetailProduct(product)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setDetailProduct(product);
+                            }
+                          }}
+                          aria-label={`View details for ${product.name}`}
                         >
                           {product.name}
                         </Text>
@@ -211,6 +222,7 @@ export function ProductsView({
                           color={isOutOfStock ? 'red' : isLowStock ? 'orange' : 'teal'}
                           size="xs"
                           radius="xl"
+                          aria-label={`Stock level: ${product.stockLevel} of target ${product.reorderThreshold}`}
                         />
                       </Stack>
                     </Table.Td>
@@ -240,7 +252,7 @@ export function ProductsView({
                     </Table.Td>
 
                     <Table.Td style={{ textAlign: 'right' }}>
-                      <Group gap={6} justify="flex-end">
+                      <Group gap={4} justify="flex-end">
                         <Tooltip label="Simulate 1 purchase order (decrements stock & triggers agentic loop)">
                           <ActionIcon
                             variant="light"
@@ -248,6 +260,7 @@ export function ProductsView({
                             size="sm"
                             disabled={isOutOfStock}
                             onClick={() => onSimulateSale(product.productId || product._id)}
+                            aria-label={`Simulate purchase order for ${product.name}`}
                           >
                             <IconShoppingCart size={15} />
                           </ActionIcon>
@@ -259,6 +272,7 @@ export function ProductsView({
                             color="gray"
                             size="sm"
                             onClick={() => handleOpenStockModal(product)}
+                            aria-label={`Edit stock for ${product.name}`}
                           >
                             <IconEdit size={15} />
                           </ActionIcon>
@@ -267,7 +281,12 @@ export function ProductsView({
                         <Menu position="bottom-end" shadow="md">
                           <Menu.Target>
                             <Tooltip label="Run on-demand AI / Rule strategies">
-                              <ActionIcon variant="subtle" color="blue" size="sm">
+                              <ActionIcon
+                                variant="subtle"
+                                color="blue"
+                                size="sm"
+                                aria-label={`Open recommendation options for ${product.name}`}
+                              >
                                 <IconSparkles size={15} />
                               </ActionIcon>
                             </Tooltip>
@@ -316,6 +335,7 @@ export function ProductsView({
               min={0}
               value={newStockValue}
               onChange={(val) => setNewStockValue(val)}
+              aria-label="New on-hand stock level"
             />
             {newStockValue < stockModalProduct.reorderThreshold && (
               <Alert color="orange" title="Agentic Signal Alert">
@@ -389,6 +409,7 @@ export function ProductsView({
               color="teal"
               leftSection={<IconShoppingCart size={16} />}
               onClick={() => onSimulateSale(detailProduct.productId || detailProduct._id)}
+              aria-label={`Simulate purchase order for ${detailProduct.name}`}
             >
               Simulate Customer Order
             </Button>
