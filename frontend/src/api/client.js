@@ -1,4 +1,7 @@
-const API_BASE = '/api';
+const rawBase = import.meta.env.VITE_API_BASE_URL;
+const API_BASE = rawBase
+  ? (rawBase.endsWith('/api') ? rawBase.replace(/\/+$/, '') : `${rawBase.replace(/\/+$/, '')}/api`)
+  : '/api';
 
 /**
  * Universal helper for backend HTTP requests with JSON serialization and robust error handling.
