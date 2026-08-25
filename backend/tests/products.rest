@@ -178,6 +178,33 @@ Content-Type: {{contentType}}
 }
 
 ### ==================================================================
+### AI COMMERCE ADVISOR (PHASE 3) — GEMINI STRATEGY ENDPOINTS
+### ==================================================================
+
+### ------------------------------------------------------------------
+### 19. AI Pricing Recommendation (PRD-003 Low Stock Scenario)
+### ------------------------------------------------------------------
+# Uses active AI strategy (or falls back to rules if GEMINI_API_KEY is not set)
+# @name aiSuggestPricing
+POST {{baseUrl}}/products/PRD-003/suggest-pricing?strategy=ai HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "INVENTORY_LOW"
+}
+
+### ------------------------------------------------------------------
+### 20. AI Reorder Recommendation (PRD-003 Replenishment Scenario)
+### ------------------------------------------------------------------
+# @name aiSuggestReorder
+POST {{baseUrl}}/products/PRD-003/suggest-reorder?strategy=ai HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "triggerReason": "INVENTORY_LOW"
+}
+
+### ==================================================================
 ### ERROR & EDGE CASE TESTS
 ### ==================================================================
 
