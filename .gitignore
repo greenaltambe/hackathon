@@ -1,9 +1,32 @@
+# Dependencies
 node_modules/
+*/node_modules/
+
+# Environment files
 .env
 .env.*
 !.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Build & Dist
 dist/
-build/.env
-.env.*
-node_modules/
-stockpulse-brief 1.html
+build/
+coverage/
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
