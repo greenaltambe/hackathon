@@ -6,7 +6,7 @@ StockPulse is an enterprise-grade autonomous commerce operations system built on
 
 ---
 
-## ⚡ Quick Start (< 5 Minutes)
+## Quick Start (< 5 Minutes)
 
 ### Prerequisites
 - **Node.js**: v18.x or v20.x+
@@ -60,7 +60,7 @@ Open **`http://localhost:3000`** (or `http://localhost:3001`) in your browser.
 
 ---
 
-## 🚀 Cloud Deployment Guide
+## Cloud Deployment Guide
 
 ### Frontend Deployment (Vercel)
 The frontend is pre-configured for Vercel deployment:
@@ -83,57 +83,191 @@ The frontend is pre-configured for Vercel deployment:
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
+
+### ASCII Architecture Diagram
 
 ```text
-                               ┌────────────────────────────────────────┐
-                               │  React 18 + Mantine Merchandising UI   │
-                               │  (Overview / Catalog / Recommendations)│
-                               └──────────────────┬─────────────────────┘
-                                                  │ HTTP (REST + 5s Polling)
-                                                  ▼
-                               ┌────────────────────────────────────────┐
-                               │     Express REST API (Port 5000)       │
-                               │  - Products, Orders, Stock, Suggestions│
-                               └──────────────────┬─────────────────────┘
-                                                  │ Mutation Complete (<15ms)
-                                                  ▼
-                               ┌────────────────────────────────────────┐
-                               │   In-Process Asynchronous EventBus     │
-                               │  - ORDER_SIMULATED, INVENTORY_CHANGED  │
-                               └──────────────────┬─────────────────────┘
-                                                  │ Non-blocking Dispatch
-                                                  ▼
-                               ┌────────────────────────────────────────┐
-                               │    Autonomous AgenticLoop Worker       │
-                               │  - Deduplication & Idempotency Guards  │
-                               └─────────┬────────────────────┬─────────┘
-                                         │                    │
-                   ┌─────────────────────▼──────┐   ┌─────────▼─────────────────────┐
-                   │    SignalDetector Service   │   │  Pluggable CommerceAdvisor    │
-                   │ - INVENTORY_LOW (< Thresh) │   │  - RuleBasedCommerceStrategy  │
-                   │ - DEMAND_SPIKE (> 2x Cat)  │   │  - AICommerceStrategy (Gemini)│
-                   └────────────────────────────┘   └───────────────────────────────┘
-                                                              │
-                                            ┌─────────────────┴─────────────────┐
-                                            │                                   │
-                                 ┌──────────▼──────────┐             ┌──────────▼──────────┐
-                                 │  PricingSuggestion  │             │  ReorderSuggestion  │
-                                 │   (Status: PENDING) │             │   (Status: PENDING) │
-                                 └──────────┬──────────┘             └──────────┬──────────┘
-                                            │                                   │
-                                            └─────────────────┬─────────────────┘
-                                                              ▼
-                                            ┌───────────────────────────────────┐
-                                            │ Human Merchandiser Review (Console│
-                                            │  - Accept: Price Update / Reorder │
-                                            │  - Reject: Dismiss Proposal       │
-                                            └───────────────────────────────────┘
++-------------------------------------------------------------------------------+
+|                       React 18 + Mantine Merchandising Console                |
+|               [ Overview Hub ]  [ Products Catalog ]  [ Recommendations ]     |
++---------------------------------------+---------------------------------------+
+                                        |
+                          HTTP REST API | (Live 5s Polling & Instant Mutations)
+                                        v
++-------------------------------------------------------------------------------+
+|                       Express / Node.js Application Layer                     |
+|            Routes: /api/products, /api/pricing-suggestions, /api/reorder      |
++-------------------+---------------------------------------+-------------------+
+                    |                                       |
+    1. Direct State | (<15ms)                2. Domain Event| (Asynchronous)
+       Mutation     v                           Dispatch    v
++-------------------------------+       +---------------------------------------+
+|        MongoDB Database       |       |          In-Process EventBus          |
+|  - Product Collection         |       |   (ORDER_SIMULATED, INVENTORY_CHANGED)|
+|  - PricingSuggestions         |       +-------------------+-------------------+
+|  - ReorderSuggestions         |                           |
++---------------+---------------+                           | Dispatches Event
+                ^                                           v
+                |                       +---------------------------------------+
+                |                       |       AgenticLoop Worker Service      |
+                |                       |   - Deduplication & Idempotency Check |
+                |                       +-------------------+-------------------+
+                |                                           |
+                |                                           | Evaluates Signals
+                |                                           v
+                |                       +---------------------------------------+
+                |                       |         SignalDetector Service        |
+                |                       |   - INVENTORY_LOW  (Stock < Threshold)|
+                |                       |   - DEMAND_SPIKE   (Velocity > 2x Avg)|
+                |                       +-------------------+-------------------+
+                |                                           |
+                |                                           | Signal Detected
+                |                                           v
+                |                       +---------------------------------------+
+                |                       |     CommerceAdvisor Abstraction       |
+                |                       |          (StrategyRegistry)           |
+                |                       +---------+-------------------+---------+
+                |                                 |                   |
+                |               Strategy: 'rule'  |                   | Strategy: 'ai'
+                |                                 v                   v
+                |               +-------------------+   +-----------------------+
+                |               | RuleBasedStrategy |   |   AICommerceStrategy  |
+                |               | - Low Stock: +10% |   |   (Contextual Prompts)|
+                |               | - Demand:    +5%  |   +-----------+-----------+
+                |               | - Reorder Formula |               |
+                |               +---------+---------+               | Calls Gemini
+                |                         |                         v
+                |                         |             +-----------------------+
+                |                         |             |      GeminiClient     |
+                |                         |             | (8000ms Timeout Guard)|
+                |                         |             +-----------+-----------+
+                |                         |                         |
+                |                         |                         | Raw JSON
+                |                         |                         v
+                |                         |             +-----------------------+
+                |                         |             |      AIValidator      |
+                |                         |             | (Price 0.1x-10x Bounds|
+                |                         |             |  Integer Quantities)  |
+                |                         |             +-----+-----------+-----+
+                |                         |                   |           |
+                |                         |   Fallback On Err |           | Valid
+                |                         +<------------------+           | Output
+                |                         |                               |
+                |   Persists PENDING      |                               |
+                |   Suggestions           +-------------------------------+
+                +-----------------------------------------+
+                                                          |
+                                                          v
+                                        +---------------------------------------+
+                                        |      Human Merchandiser Review        |
+                                        |       (Accept / Reject Modals)        |
+                                        +-------------------+-------------------+
+                                                            |
+                                           Merchandiser     | Accepts Proposal
+                                           Decision         v
+                                        +---------------------------------------+
+                                        |        Live Product State Mutation    |
+                                        |    - Price Updated / Stock Replenished|
+                                        +---------------------------------------+
 ```
 
 ---
 
-## 🔑 Key Features & Technical Highlights
+### Mermaid Architecture Diagram
+
+```mermaid
+flowchart TD
+    %% Styling Classes
+    classDef client fill:#f0fdfa,stroke:#0d9488,stroke-width:2px,color:#0f172a;
+    classDef api fill:#f8fafc,stroke:#3b82f6,stroke-width:2px,color:#0f172a;
+    classDef event fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a;
+    classDef ai fill:#fae8ff,stroke:#a855f7,stroke-width:2px,color:#0f172a;
+    classDef db fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#0f172a;
+    classDef human fill:#fff1f2,stroke:#e11d48,stroke-width:2px,color:#0f172a;
+
+    %% 1. Frontend Tier
+    subgraph FrontendTier["FRONTEND TIER (React 18 + Mantine UI)"]
+        UI_Overview["Overview Dashboard<br/>(KPIs & Watchlist)"]
+        UI_Catalog["Products Catalog<br/>(Stock Health & Sim Sale)"]
+        UI_Review["Recommendations Console<br/>(Pricing & Replenishment)"]
+    end
+    class UI_Overview,UI_Catalog,UI_Review client;
+
+    %% 2. API & Backend Tier
+    subgraph ApiTier["APPLICATION BACKEND (Express / Node.js)"]
+        RestApi["Express REST API Routes<br/>(/api/products, /api/suggestions)"]
+        ProdService["Product Service & Domain Logic"]
+    end
+    class RestApi,ProdService api;
+
+    %% 3. Persistence Tier
+    subgraph PersistenceTier["PERSISTENCE TIER (MongoDB)"]
+        DB_Product[("Product Collection<br/>(Stock, Price, Status)")]
+        DB_Suggestions[("Suggestion Collections<br/>(Pricing & Reorder - PENDING)")]
+    end
+    class DB_Product,DB_Suggestions db;
+
+    %% 4. Event & Agentic Pipeline
+    subgraph AgenticPipeline["EVENT-DRIVEN AGENTIC PIPELINE"]
+        EventBus["Asynchronous EventBus<br/>(ORDER_SIMULATED / INVENTORY_CHANGED)"]
+        AgenticLoop["AgenticLoop Worker<br/>(Idempotency & Deduplication)"]
+        SignalDetector["SignalDetector Service<br/>(INVENTORY_LOW / DEMAND_SPIKE)"]
+    end
+    class EventBus,AgenticLoop,SignalDetector event;
+
+    %% 5. Pluggable Commerce Engine
+    subgraph CommerceEngine["PLUGGABLE COMMERCE ENGINE"]
+        StrategyRegistry["CommerceAdvisor Abstraction<br/>(StrategyRegistry)"]
+        RuleStrategy["RuleBasedCommerceStrategy<br/>(+10% Low Stock, +5% Spike, Reorder Formula)"]
+        AIStrategy["AICommerceStrategy<br/>(Contextual Prompts & Resilience)"]
+    end
+    class StrategyRegistry,RuleStrategy,AIStrategy event;
+
+    %% 6. AI Intelligence Tier
+    subgraph AITier["AI INTELLIGENCE TIER (Google Gemini)"]
+        GeminiClient["GeminiClient<br/>(JSON Schema Mode + 8s Timeout)"]
+        AIValidator["AIValidator<br/>(Price 0.1x-10x, Integer Qty, Conf Bounds)"]
+    end
+    class GeminiClient,AIValidator ai;
+
+    %% 7. Human Review Tier
+    subgraph HumanTier["HUMAN-IN-THE-LOOP CONTROL"]
+        HumanReview{"Merchandiser Decision<br/>(Accept / Reject)"}
+        StateMutation["Product State Mutation<br/>(Price Update / Stock Replenish)"]
+    end
+    class HumanReview,StateMutation human;
+
+    %% Connections & Data Flow
+    UI_Catalog -->|"1. Simulate Sale / Edit Stock"| RestApi
+    RestApi --> ProdService
+    ProdService -->|"2. State Update"| DB_Product
+    ProdService -->|"3. Publish Domain Event"| EventBus
+    
+    EventBus -.->|"4. Async Non-blocking Dispatch"| AgenticLoop
+    AgenticLoop -->|"5. Evaluate Catalog State"| SignalDetector
+    SignalDetector -->|"6. Signal Detected"| StrategyRegistry
+    
+    StrategyRegistry -->|"Strategy: 'rule'"| RuleStrategy
+    StrategyRegistry -->|"Strategy: 'ai'"| AIStrategy
+    
+    AIStrategy -->|"7. Build Situational Prompt"| GeminiClient
+    GeminiClient -->|"8. Raw LLM JSON"| AIValidator
+    AIValidator -->|"Valid Response"| DB_Suggestions
+    AIValidator -.->|"Timeout / Bounds Failure<br/>(Transparent Fallback)"| RuleStrategy
+    RuleStrategy --> DB_Suggestions
+
+    DB_Suggestions -->|"9. 5s Live Polling / Refresh"| UI_Review
+    UI_Review -->|"10. Human Review Action"| HumanReview
+    
+    HumanReview -->|"ACCEPT"| StateMutation
+    HumanReview -->|"REJECT"| DB_Suggestions
+    StateMutation -->|"11. Mutate Live Catalog"| DB_Product
+```
+
+---
+
+## Key Features & Technical Highlights
 
 ### 1. Autonomous Agentic Recommendation Loop
 - **Event-Driven & Non-Blocking**: Customer checkout (`POST /api/products/:id/orders`) and inventory adjustments (`PATCH /api/products/:id/stock`) return immediately. Background domain events trigger the `AgenticLoop`.
@@ -144,13 +278,13 @@ The frontend is pre-configured for Vercel deployment:
 - **`CommerceAdvisor` Abstraction**: Common base interface enabling seamless switching via `COMMERCE_STRATEGY=rule` or `COMMERCE_STRATEGY=ai`.
 - **`RuleBasedCommerceStrategy`**: Deterministic algorithms:
   - *Inventory Low*: +10% price markup to protect margin and prevent premature stockout.
-  - *Demand Spike*: +5% price adjustment when product velocity exceeds $2\times$ category average.
+  - *Demand Spike*: +5% price adjustment when product velocity exceeds 2x category average.
   - *Replenishment Target*: `(Threshold * 3) - CurrentStock` with 7-day lead time.
 - **`AICommerceStrategy` (Google Gemini)**:
   - Situational prompt engineering ("Two prompts, not one" tailored for inventory deficits vs velocity surges).
   - Strict JSON schema mode.
-  - Domain validation (`aiValidator.js`) enforcing price sanity bounds ($0.1\times \le \text{price} \le 10\times$), integer quantities, and confidence metrics ($0.0 \le c \le 1.0$).
-  - **Transparent Fallback**: Automatically degrades to rule strategy on timeouts ($8000$ms), API quota exhaustion, or parsing failures.
+  - Domain validation (`aiValidator.js`) enforcing price sanity bounds (0.1x to 10x), integer quantities, and confidence metrics (0.0 to 1.0).
+  - **Transparent Fallback**: Automatically degrades to rule strategy on timeouts (8000ms), API quota exhaustion, or parsing failures.
 
 ### 3. Human-in-the-Loop Merchandising Console
 - **Production Light Theme**: Clean SaaS design with high-contrast typography (`#0f172a`), subtle borders (`#e2e8f0`), and soft shadows.
@@ -160,7 +294,7 @@ The frontend is pre-configured for Vercel deployment:
 
 ---
 
-## 📡 REST API Reference
+## REST API Reference
 
 ### Health & Monitoring
 | Method | Endpoint | Description |
@@ -189,7 +323,7 @@ The frontend is pre-configured for Vercel deployment:
 
 ---
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 ### Backend (`backend/.env`)
 ```ini
@@ -213,7 +347,7 @@ VITE_API_BASE_URL=http://localhost:5000
 
 ---
 
-## 🧪 Automated Testing Suite
+## Automated Testing Suite
 
 The project features a **100% passing automated test suite** with **163 unit and integration tests**:
 
@@ -233,7 +367,7 @@ npm test
 
 ---
 
-## 🏛️ Architecture Decision Records (ADRs)
+## Architecture Decision Records (ADRs)
 
 Documented in detail in [`ADR.md`](file:///c:/Users/zycus/Desktop/Greenal%20Tambe/ADR.md):
 
@@ -246,7 +380,7 @@ Documented in detail in [`ADR.md`](file:///c:/Users/zycus/Desktop/Greenal%20Tamb
 
 ---
 
-## 📦 Seed Data Catalog (Addendum A)
+## Seed Data Catalog (Addendum A)
 
 | ID | SKU | Name | Category | Base Price | Stock | Threshold | Velocity | Initial Status |
 |---|---|---|---|---|---|---|---|---|
@@ -261,6 +395,6 @@ Documented in detail in [`ADR.md`](file:///c:/Users/zycus/Desktop/Greenal%20Tamb
 
 ---
 
-## 📜 License & Acknowledgments
+## License & Acknowledgments
 Built for the **StockPulse Agentic Commerce Hackathon**.
 Licensed under the ISC License.
