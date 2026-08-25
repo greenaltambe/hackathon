@@ -1,5 +1,5 @@
 import { connectDB, disconnectDB } from './config/db.js';
-import { Product } from './models/index.js';
+import { Product, PricingSuggestion, ReorderSuggestion } from './models/index.js';
 import { seedProducts } from './data/seedProducts.js';
 
 /**
@@ -8,14 +8,18 @@ import { seedProducts } from './data/seedProducts.js';
  * without creating duplicates or violating unique constraints.
  *
  * @param {Object} options
- * @param {boolean} [options.clean=false] If true, clears existing products before seeding
+ * @param {boolean} [options.clean=false] If true, clears existing products and suggestions before seeding
  * @returns {Promise<Array>} Seeded product documents
  */
 export async function seedDatabase({ clean = false } = {}) {
   try {
     if (clean) {
-      console.log('[Seed] Clearing existing products collection...');
-      await Product.deleteMany({});
+      console.log('[Seed] Clearing existing products, pricing suggestions, and reorder suggestions...');
+      await Promise.all([
+        Product.deleteMany({}),
+        PricingSuggestion.deleteMany({}),
+        ReorderSuggestion.deleteMany({}),
+      ]);
     }
 
     console.log(`[Seed] Seeding ${seedProducts.length} core products...`);
